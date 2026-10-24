@@ -1,0 +1,24 @@
+[project]
+name = "optimisation-techniques-assignment"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Akshit", email = "akshit25@iiserb.ac.in" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "numpy>=2.5.4",
+]
+
+[project.scripts]
+optimisation-techniques-assignment = "optimisation_techniques_assignment:main"
+
+[build-system]
+requires = ["uv_build>=0.13.4,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.4.0",
+]
