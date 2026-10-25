@@ -1,0 +1,9 @@
+# Managed with uv. For full dependencies and lockfile, see pyproject.toml and uv.lock.
+# To sync the virtual environment, run:
+#     uv sync
+# Or using uv pip:
+#     uv pip install -r requirements.txt
+
+numpy>=1.24.0
+scipy>=1.10.0
+matplotlib>=3.7.0
