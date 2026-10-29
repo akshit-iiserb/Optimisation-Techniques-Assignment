@@ -1,12 +1,9 @@
-import sys
-import re
 import numpy as np
 from scipy.optimize import linprog
 
-def get_params(roll):
-    digits = re.sub(r"\D", "", str(roll))
-    d = digits.zfill(4)[-4:]
-    d1, d2, d3, d4 = map(int, d)
+def get_params(roll="25027"):
+    digits = [c for c in str(roll) if c.isdigit()]
+    d1, d2, d3, d4 = map(int, digits[-4:])
     p = d4 % 5 + 1
     q = d3 % 4 + 1
     r = d2 % 3 + 1
@@ -53,17 +50,10 @@ def run(roll="25027"):
     p, q, r, k = get_params(roll)
     print(f"Your roll number: {roll}   p = {p}   q = {q}   r = {r}   k = {k}")
     
-    # 1. Dual values from Problem 8 final tableau
     y_star_tableau, z_star = solve_simplex_tableau(p, q, r, k)
     print("\nOptimal Dual Values from Problem 8 Final Tableau:")
     print(f"  y1* = {y_star_tableau[0]:.4f}, y2* = {y_star_tableau[1]:.4f}, y3* = {y_star_tableau[2]:.4f}")
     
-    # 2. Solve dual directly with linprog
-    # min (10+k)*y1 + (12+p)*y2 + (18+q)*y3
-    # s.t. y1 + 2*y2 + y3 >= 2 + p
-    #      2*y1 + y2 + y3 >= 3 + q
-    #      y1 + 2*y2 + 3*y3 >= 1 + r
-    # y >= 0
     c_dual = [10.0 + k, 12.0 + p, 18.0 + q]
     A_ub_d = [
         [-1.0, -2.0, -1.0],
@@ -78,7 +68,6 @@ def run(roll="25027"):
     print(f"  y1* = {res_dual.x[0]:.4f}, y2* = {res_dual.x[1]:.4f}, y3* = {res_dual.x[2]:.4f}")
     print(f"  Dual values match tableau: {np.allclose(y_star_tableau, res_dual.x, atol=1e-4)}")
     
-    # 3. Increase first RHS by 1 and re-solve primal
     c_primal = [-(2.0 + p), -(3.0 + q), -(1.0 + r)]
     A_ub_p = [
         [1.0, 2.0, 1.0],
@@ -104,5 +93,4 @@ def run(roll="25027"):
     print("Providing more of an unused resource cannot improve the objective, so its marginal value (shadow price) is zero.")
 
 if __name__ == "__main__":
-    roll_num = sys.argv[1] if len(sys.argv) > 1 else "25027"
-    run(roll_num)
+    run()
