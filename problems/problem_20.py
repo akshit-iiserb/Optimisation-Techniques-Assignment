@@ -1,13 +1,9 @@
-import sys
-import re
-from itertools import product
 import numpy as np
 from scipy.optimize import linprog
 
-def get_params(roll):
-    digits = re.sub(r"\D", "", str(roll))
-    d = digits.zfill(4)[-4:]
-    d1, d2, d3, d4 = map(int, d)
+def get_params(roll="25027"):
+    digits = [c for c in str(roll) if c.isdigit()]
+    d1, d2, d3, d4 = map(int, digits[-4:])
     p = d4 % 5 + 1
     q = d3 % 4 + 1
     r = d2 % 3 + 1
@@ -26,7 +22,6 @@ def run(roll="25027"):
     print(f"Values  v = {v.tolist()}")
     print(f"Weights w = {w.tolist()}")
     
-    # Depth-First Branch and Bound
     c = -v
     A_ub = [w]
     b_ub = [W]
@@ -57,13 +52,11 @@ def run(roll="25027"):
         z_lp = -res.fun
         x_lp = res.x
         
-        # Bound pruning
         if z_lp <= z_best + 1e-6:
             status = f"Fathomed by bound (<= {z_best:.1f})"
             print(f"{node_id:4d} | {parent_id:6d} | {branch_desc:>10} | {z_lp:7.4f} | {status}")
             continue
             
-        # Check integrality
         frac_indices = [i for i in range(6) if not np.isclose(x_lp[i], np.round(x_lp[i]), atol=1e-5)]
         
         if len(frac_indices) == 0:
@@ -73,17 +66,14 @@ def run(roll="25027"):
             print(f"{node_id:4d} | {parent_id:6d} | {branch_desc:>10} | {z_lp:7.4f} | {status}")
             continue
             
-        # Branch on first fractional variable
         frac_idx = frac_indices[0]
         status = f"Branched on x{frac_idx+1}"
         print(f"{node_id:4d} | {parent_id:6d} | {branch_desc:>10} | {z_lp:7.4f} | {status}")
         
-        # Child 2: >= 1 (i.e. x_i = 1)
         bounds_ge = [list(b) for b in bounds]
         bounds_ge[frac_idx] = (1.0, 1.0)
         bounds_ge = [(b[0], b[1]) for b in bounds_ge]
         
-        # Child 1: <= 0 (i.e. x_i = 0)
         bounds_le = [list(b) for b in bounds]
         bounds_le[frac_idx] = (0.0, 0.0)
         bounds_le = [(b[0], b[1]) for b in bounds_le]
@@ -93,7 +83,6 @@ def run(roll="25027"):
         node_counter += 1
         node_le_id = node_counter
         
-        # Push >= 1 first, then <= 0 so that <= 0 is explored first
         stack.append((node_ge_id, node_id, f"x{frac_idx+1} = 1", bounds_ge))
         stack.append((node_le_id, node_id, f"x{frac_idx+1} = 0", bounds_le))
         
@@ -102,18 +91,23 @@ def run(roll="25027"):
     print(f"  Optimal Value z* = {z_best:.4f}")
     print(f"  Total Nodes Explored = {nodes_explored}")
     
-    # Brute-force enumeration
+    # Beginner-friendly 6-loop brute force
     bf_best_z = -np.inf
     bf_best_x = None
     
-    for combo in product([0, 1], repeat=6):
-        combo_arr = np.array(combo)
-        weight_tot = np.dot(w, combo_arr)
-        if weight_tot <= W:
-            val_tot = np.dot(v, combo_arr)
-            if val_tot > bf_best_z:
-                bf_best_z = val_tot
-                bf_best_x = combo_arr
+    for x0 in [0, 1]:
+      for x1 in [0, 1]:
+        for x2 in [0, 1]:
+          for x3 in [0, 1]:
+            for x4 in [0, 1]:
+              for x5 in [0, 1]:
+                combo_arr = np.array([x0, x1, x2, x3, x4, x5])
+                weight_tot = np.dot(w, combo_arr)
+                if weight_tot <= W:
+                    val_tot = np.dot(v, combo_arr)
+                    if val_tot > bf_best_z:
+                        bf_best_z = val_tot
+                        bf_best_x = combo_arr
                 
     print(f"\nBrute-Force Enumeration (64 combinations):")
     print(f"  Optimal x* = {bf_best_x.tolist()}")
@@ -122,5 +116,4 @@ def run(roll="25027"):
     print(f"Optimal objective value confirmed: {match}")
 
 if __name__ == "__main__":
-    roll_num = sys.argv[1] if len(sys.argv) > 1 else "25027"
-    run(roll_num)
+    run()
