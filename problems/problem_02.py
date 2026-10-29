@@ -1,12 +1,9 @@
-import sys
-import re
 import numpy as np
 from scipy.optimize import minimize
 
-def get_params(roll):
-    digits = re.sub(r"\D", "", str(roll))
-    d = digits.zfill(4)[-4:]
-    d1, d2, d3, d4 = map(int, d)
+def get_params(roll="25027"):
+    digits = [c for c in str(roll) if c.isdigit()]
+    d1, d2, d3, d4 = map(int, digits[-4:])
     p = d4 % 5 + 1
     q = d3 % 4 + 1
     r = d2 % 3 + 1
@@ -45,10 +42,10 @@ def run(roll="25027"):
         print(f"  f(x) = {f(pt):.4f}")
         
     # 5 random starts for scipy.optimize.minimize
-    rng = np.random.default_rng(int(re.sub(r"\D", "", str(roll))))
+    seed = int("".join([c for c in str(roll) if c.isdigit()]))
+    rng = np.random.default_rng(seed)
     print("\nRunning scipy.optimize.minimize from 5 random starts:")
     for i in range(5):
-        # Sample starting points around the stationary points
         x0 = rng.uniform(-2 * max(p, q), 2 * max(p, q), size=3)
         x0[2] = rng.uniform(k - 5, k + 5)
         res = minimize(f, x0, method='BFGS')
@@ -65,5 +62,4 @@ def run(roll="25027"):
         print(f"  Classification: {reached_label} (status={res.status})")
 
 if __name__ == "__main__":
-    roll_num = sys.argv[1] if len(sys.argv) > 1 else "25027"
-    run(roll_num)
+    run()
