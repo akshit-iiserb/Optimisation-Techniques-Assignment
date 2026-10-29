@@ -1,12 +1,9 @@
-import sys
-import re
 import numpy as np
 from scipy.optimize import root_scalar
 
-def get_params(roll):
-    digits = re.sub(r"\D", "", str(roll))
-    d = digits.zfill(4)[-4:]
-    d1, d2, d3, d4 = map(int, d)
+def get_params(roll="25027"):
+    digits = [c for c in str(roll) if c.isdigit()]
+    d1, d2, d3, d4 = map(int, digits[-4:])
     p = d4 % 5 + 1
     q = d3 % 4 + 1
     r = d2 % 3 + 1
@@ -33,7 +30,6 @@ def run(roll="25027"):
         eval_df += 1
         return 5.0 * lam**4 - 15.0 * lam**2 - c
         
-    # Phase 1: Bracketing using t0 = 0.4
     t = 0.4
     pt = 0.0
     d_prev = df(pt)
@@ -50,7 +46,6 @@ def run(roll="25027"):
         
     print(f"\nBracketing found: A = {A:.4f} (df = {df(A):.4f}), B = {B:.4f} (df = {df(B):.4f})")
     
-    # Phase 2: Cubic interpolation iterations
     print("\n--- Cubic Interpolation Iterations ---")
     print(f"{'Iter':>4} | {'A':>7} | {'B':>7} | {'lam_star':>9} | {'f(lam*)':>9} | {'f\'(lam*)':>10} | {'|f\'|':>8}")
     print("-" * 75)
@@ -65,7 +60,6 @@ def run(roll="25027"):
         disc = Z**2 - dfA * dfB
         Q = np.sqrt(max(0.0, disc))
         
-        # Test both signs
         denom = dfA + dfB + 2.0 * Z
         lam_plus = A + ((dfA + Z + Q) / denom) * (B - A)
         lam_minus = A + ((dfA + Z - Q) / denom) * (B - A)
@@ -93,12 +87,10 @@ def run(roll="25027"):
     print(f"Total iterations: {iter_count}")
     print(f"Function evaluations: f={eval_f}, f'={eval_df}")
     
-    # True root of f'(lambda) = 0
     root_res = root_scalar(df, bracket=[0.0, 5.0], method='brentq')
     print(f"\nTrue root of f'(lambda) = 0: lambda* = {root_res.root:.4f}")
     print(f"Error in root: {abs(lam_star - root_res.root):.6f}")
     print("Comparison: Cubic interpolation converged rapidly using gradient information compared to quadratic fit.")
 
 if __name__ == "__main__":
-    roll_num = sys.argv[1] if len(sys.argv) > 1 else "25027"
-    run(roll_num)
+    run()
