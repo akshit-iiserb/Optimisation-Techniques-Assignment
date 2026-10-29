@@ -1,12 +1,9 @@
-import sys
-import re
 import numpy as np
 from scipy.optimize import linprog
 
-def get_params(roll):
-    digits = re.sub(r"\D", "", str(roll))
-    d = digits.zfill(4)[-4:]
-    d1, d2, d3, d4 = map(int, d)
+def get_params(roll="25027"):
+    digits = [c for c in str(roll) if c.isdigit()]
+    d1, d2, d3, d4 = map(int, digits[-4:])
     p = d4 % 5 + 1
     q = d3 % 4 + 1
     r = d2 % 3 + 1
@@ -17,12 +14,7 @@ def run(roll="25027"):
     p, q, r, k = get_params(roll)
     print(f"Your roll number: {roll}   p = {p}   q = {q}   r = {r}   k = {k}")
     
-    # 1. Primal LP (max z => min -z):
-    # max (p+2)*x1 + (q+1)*x2 + 4*x3
-    # s.t.  x1 +  x2 + x3 <= 10 + k
-    #      -2*x1 + x2 - x3 <= -r
-    #       x1 + 2*x2 - x3 = 4 + p
-    # x1 >= 0, x2 >= 0, x3 free
+    # 1. Primal LP (max z => min -z)
     c_primal = [-(p + 2.0), -(q + 1.0), -4.0]
     A_ub_p = [
         [1.0, 1.0, 1.0],
@@ -42,12 +34,7 @@ def run(roll="25027"):
     print(f"  x1* = {x_star[0]:.4f}, x2* = {x_star[1]:.4f}, x3* = {x_star[2]:.4f}")
     print(f"  Primal optimum z* = {z_star:.4f}")
     
-    # 2. Dual LP:
-    # min w = (10+k)*y1 + r*y2 + (4+p)*y3
-    # s.t.  y1 + 2*y2 + y3 >= p + 2  => -y1 - 2*y2 - y3 <= -(p + 2)
-    #       y1 -   y2 + 2*y3 >= q + 1  => -y1 +   y2 - 2*y3 <= -(q + 1)
-    #       y1 +   y2 -   y3 = 4
-    # y1 >= 0, y2 <= 0, y3 free
+    # 2. Dual LP
     c_dual = [10.0 + k, float(r), 4.0 + p]
     A_ub_d = [
         [-1.0, -2.0, -1.0],
@@ -70,12 +57,9 @@ def run(roll="25027"):
     # Strong Duality Check
     print(f"\nStrong Duality (z* == w*): {np.isclose(z_star, w_star, atol=1e-4)}")
     
-    # Complementary Slackness Check:
-    # Primal slacks:
+    # Complementary Slackness Check
     s1 = (10.0 + k) - (x_star[0] + x_star[1] + x_star[2])
     e2 = (2.0 * x_star[0] - x_star[1] + x_star[2]) - r
-    
-    # Dual slacks:
     d1 = (y_star[0] + 2.0 * y_star[1] + y_star[2]) - (p + 2.0)
     d2 = (y_star[0] - y_star[1] + 2.0 * y_star[2]) - (q + 1.0)
     
@@ -94,5 +78,4 @@ def run(roll="25027"):
     print(f"Every complementary slackness product is zero: {all_zero}")
 
 if __name__ == "__main__":
-    roll_num = sys.argv[1] if len(sys.argv) > 1 else "25027"
-    run(roll_num)
+    run()
