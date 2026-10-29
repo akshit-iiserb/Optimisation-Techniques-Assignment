@@ -1,13 +1,9 @@
-import sys
-import re
-import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-def get_params(roll):
-    digits = re.sub(r"\D", "", str(roll))
-    d = digits.zfill(4)[-4:]
-    d1, d2, d3, d4 = map(int, d)
+def get_params(roll="25027"):
+    digits = [c for c in str(roll) if c.isdigit()]
+    d1, d2, d3, d4 = map(int, digits[-4:])
     p = d4 % 5 + 1
     q = d3 % 4 + 1
     r = d2 % 3 + 1
@@ -30,7 +26,6 @@ def run(roll="25027"):
     L0 = b0 - a0
     
     # 1. Fibonacci Search (n = 11)
-    # Fibonacci numbers: F0=1, F1=1, F2=2, F3=3, F4=5, F5=8, F6=13, F7=21, F8=34, F9=55, F10=89, F11=144
     F = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144]
     
     print("\n--- 1. Fibonacci Method (n = 11) ---")
@@ -51,7 +46,6 @@ def run(roll="25027"):
     
     for k_step in range(2, n):
         if k_step == n - 1:
-            # Final step with small perturbation
             eps = 0.001
             lam2 = lam1 + eps
             f2 = f(lam2)
@@ -87,7 +81,7 @@ def run(roll="25027"):
     # 2. Golden Section Search (n = 11)
     print("\n--- 2. Golden Section Method (n = 11) ---")
     a, b = a0, b0
-    gamma = (np.sqrt(5.0) - 1.0) / 2.0  # ~0.618034
+    gamma = (np.sqrt(5.0) - 1.0) / 2.0
     
     lam1 = b - gamma * (b - a)
     lam2 = a + gamma * (b - a)
@@ -125,8 +119,7 @@ def run(roll="25027"):
     print(f"\nGolden Section Final Interval: [{final_gs[0]:.4f}, {final_gs[1]:.4f}]")
     print(f"Golden Section Final Length Ln = {final_L_gs:.4f}, Ln/L0 = {ratio_gs:.4f}")
 
-    # Plotting comparison
-    os.makedirs("figures", exist_ok=True)
+    # Plotting
     plt.figure(figsize=(8, 5))
     plt.plot(evals_fib, lens_fib, 'bo-', label='Fibonacci Search')
     plt.plot(evals_gs, lens_gs, 'rs--', label='Golden Section Search')
@@ -141,5 +134,4 @@ def run(roll="25027"):
     print("Saved plot to figures/problem_16.png")
 
 if __name__ == "__main__":
-    roll_num = sys.argv[1] if len(sys.argv) > 1 else "25027"
-    run(roll_num)
+    run()
