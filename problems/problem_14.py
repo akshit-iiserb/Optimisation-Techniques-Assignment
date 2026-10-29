@@ -1,11 +1,8 @@
-import sys
-import re
 import numpy as np
 
-def get_params(roll):
-    digits = re.sub(r"\D", "", str(roll))
-    d = digits.zfill(4)[-4:]
-    d1, d2, d3, d4 = map(int, d)
+def get_params(roll="25027"):
+    digits = [c for c in str(roll) if c.isdigit()]
+    d1, d2, d3, d4 = map(int, digits[-4:])
     p = d4 % 5 + 1
     q = d3 % 4 + 1
     r = d2 % 3 + 1
@@ -16,7 +13,6 @@ def run(roll="25027"):
     p, q, r, k = get_params(roll)
     print(f"Your roll number: {roll}   p = {p}   q = {q}   r = {r}   k = {k}")
     
-    # Analytical minimizer
     lam_star = (4.0 + 2.0 * p)**(1.0 / 3.0)
     print(f"\nAnalytical minimizer lambda* = (4 + 2p)^(1/3) = {lam_star:.4f}")
     
@@ -76,7 +72,6 @@ def run(roll="25027"):
     print(f"Function evaluations used: {eval_count}")
     
     # 3. Smallest n for final interval <= 1% of L0
-    # Final length is 2*L0 / (n + 1) <= 0.01 * L0 => 2/(n+1) <= 0.01 => n + 1 >= 200 => n >= 199
     n_star = int(np.ceil(2.0 / 0.01 - 1.0))
     print(f"\n--- 3. Exhaustive Search for <= 1% interval ---")
     print(f"Smallest n = {n_star}")
@@ -96,5 +91,4 @@ def run(roll="25027"):
     print(f"True minimizer lambda* = {lam_star:.4f} is inside interval: {final_int_star[0] <= lam_star <= final_int_star[1]}")
 
 if __name__ == "__main__":
-    roll_num = sys.argv[1] if len(sys.argv) > 1 else "25027"
-    run(roll_num)
+    run()
