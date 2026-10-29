@@ -1,31 +1,35 @@
-import sys
-import re
-import os
-import time
-import heapq
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import linprog, milp, LinearConstraint
-from generate_instance import instance
 
-def get_params(roll):
-    digits = re.sub(r"\D", "", str(roll))
-    d = digits.zfill(4)[-4:]
-    d1, d2, d3, d4 = map(int, d)
+def get_instance(roll="25027"):
+    digits = [c for c in str(roll) if c.isdigit()]
+    d1, d2, d3, d4 = map(int, digits[-4:])
     p = d4 % 5 + 1
     q = d3 % 4 + 1
     r = d2 % 3 + 1
     k = (d1 + d2 + d3 + d4) % 9 + 1
-    return p, q, r, k
+    
+    seed = int("".join(digits))
+    rng = np.random.default_rng(seed)
+    n, m = 40 + 2 * k, 12
+    pts = rng.uniform(0, 8, size=(n, 2))
+    gx, gy = np.meshgrid([1, 3, 5, 7], [1.3, 4, 6.7])
+    sites = np.c_[gx.ravel(), gy.ravel()] + rng.uniform(-0.6, 0.6, size=(m, 2))
+    demand = rng.integers(1, 6 + p, size=n)
+    cap = rng.integers(25, 46, size=m) + 2 * q
+    fixed = rng.integers(800, 1501, size=m) + 50 * r
+    dist = np.linalg.norm(pts[:, None, :] - sites[None, :, :], axis=2)
+    
+    return dict(roll=str(roll), p=p, q=q, r=r, k=k, n=n, m=m,
+                c1=0.02, c2=2000 * (1 + 0.1 * q), E=100 + 10 * r, kappa=0.5, gamma=0.1,
+                demand=demand, capacity=cap, fixed=fixed, dist=dist.round(3))
 
 def run(roll="25027"):
-    p, q, r, k = get_params(roll)
+    inst = get_instance(roll)
+    p, q, r, k = inst['p'], inst['q'], inst['r'], inst['k']
     print(f"Your roll number: {roll}   p = {p}   q = {q}   r = {r}   k = {k}")
     
-    inst = instance(roll)
     n, m = inst['n'], inst['m']
     c1, c2, E, kappa, gamma = inst['c1'], inst['c2'], inst['E'], inst['kappa'], inst['gamma']
     d = np.array(inst['demand'])
@@ -33,11 +37,8 @@ def run(roll="25027"):
     f_cost = np.array(inst['fixed'])
     dist = np.array(inst['dist'])
     
-    os.makedirs("figures", exist_ok=True)
-    
     # ---------------- 21.1 Range-optimal speed ----------------
     print("\n================ 21.1 Range-Optimal Speed ================")
-    # Minimize e(v) = c1*v^2 + c2/v^2
     def e_fun(v):
         return c1 * v**2 + c2 / (v**2)
     def de_fun(v):
@@ -112,20 +113,17 @@ def run(roll="25027"):
     print(f"Variables: {num_vars} ({m} hubs y_j, {n*m} assignments x_ij)")
     print(f"Constraints: {num_constraints} ({n} demand, {m} capacity, {n*m} strong linking)")
     
-    # Model Setup
     c_obj = np.zeros(num_vars)
     c_obj[:m] = f_cost
     for i in range(n):
         for j in range(m):
             c_obj[m + i * m + j] = 2.0 * dist[i, j] * c_opt * d[i]
             
-    # Equality: sum_j x_{ij} = 1
     A_eq = np.zeros((n, num_vars))
     for i in range(n):
         A_eq[i, m + i * m : m + (i + 1) * m] = 1.0
     b_eq = np.ones(n)
     
-    # Inequality: capacity + strong linking
     A_ub_strong = np.zeros((m + n * m, num_vars))
     for j in range(m):
         A_ub_strong[j, j] = -Q[j]
@@ -152,13 +150,11 @@ def run(roll="25027"):
     z_lp_strong = res_lp_strong.fun
     print(f"Strong LP Relaxation Objective: z_LP = {z_lp_strong:.4f} Rs/hour")
     
-    # Dual values (marginals)
     demand_marginals = res_lp_strong.eqlin.marginals
     most_expensive_pt = int(np.argmax(demand_marginals))
     print(f"Demand point most expensive to serve: Point {most_expensive_pt} (Marginal = {demand_marginals[most_expensive_pt]:.4f} Rs/hour)")
     print(f"Reason: Point {most_expensive_pt} is located furthest from available candidate hubs or has tight reachability.")
     
-    # Complementary slackness for capacity constraints
     cap_slacks = np.zeros(m)
     y_sol = res_lp_strong.x[:m]
     x_sol = res_lp_strong.x[m:].reshape((n, m))
@@ -172,26 +168,22 @@ def run(roll="25027"):
     print("\n================ 21.3 Branch and Bound Variants ================")
     
     def solve_bb(node_strategy="dfs", branch_strategy="first", max_nodes=500):
-        t_start = time.time()
         lps_solved = 0
         nodes_explored = 0
         z_best = np.inf
         y_best = None
         
-        # Priority queue or stack
-        # Entry: (priority, counter, bounds_y)
-        counter = 0
         if node_strategy == "dfs":
-            pool = [([(0.0, 1.0)] * m, 0.0)]
+            pool = [[(0.0, 1.0)] * m]
         else:
-            pool = []
-            heapq.heappush(pool, (0.0, counter, [(0.0, 1.0)] * m))
+            pool = [([(0.0, 1.0)] * m, 0.0)]
             
         while pool and nodes_explored < max_nodes:
             if node_strategy == "dfs":
-                bounds_y, _ = pool.pop()
+                bounds_y = pool.pop()
             else:
-                _, _, bounds_y = heapq.heappop(pool)
+                best_idx = min(range(len(pool)), key=lambda i: pool[i][1])
+                bounds_y, _ = pool.pop(best_idx)
                 
             nodes_explored += 1
             node_bounds = list(bounds_y) + bounds[m:]
@@ -218,29 +210,22 @@ def run(roll="25027"):
             if branch_strategy == "first":
                 branch_j = frac_y[0]
             else:
-                # Most fractional: closest to 0.5
                 branch_j = min(frac_y, key=lambda j: abs(y_node[j] - 0.5))
                 
-            # Child 1: y_j = 0
             b0 = list(bounds_y)
             b0[branch_j] = (0.0, 0.0)
-            # Child 2: y_j = 1
             b1 = list(bounds_y)
             b1[branch_j] = (1.0, 1.0)
             
             if node_strategy == "dfs":
-                # Push 1 first, then 0 so 0 explored first
-                pool.append((b1, z_node))
-                pool.append((b0, z_node))
+                pool.append(b1)
+                pool.append(b0)
             else:
-                counter += 1
-                heapq.heappush(pool, (z_node, counter, b0))
-                counter += 1
-                heapq.heappush(pool, (z_node, counter, b1))
+                pool.append((b0, z_node))
+                pool.append((b1, z_node))
                 
-        t_elapsed = time.time() - t_start
         gap = (z_best - z_lp_strong) / z_best if z_best < np.inf else 0.0
-        return nodes_explored, lps_solved, t_elapsed, z_best, gap, y_best
+        return nodes_explored, lps_solved, z_best, gap, y_best
 
     variants = [
         ("Depth-First", "First-Frac", "dfs", "first"),
@@ -249,17 +234,12 @@ def run(roll="25027"):
         ("Best-Bound",  "Most-Frac", "best", "most")
     ]
     
-    print(f"{'Node Strategy':>12} | {'Branch Rule':>10} | {'Nodes':>6} | {'LPs':>6} | {'Time (s)':>8} | {'Best z (Rs)':>12} | {'Gap %':>6}")
-    print("-" * 75)
+    print(f"{'Node Strategy':>12} | {'Branch Rule':>10} | {'Nodes':>6} | {'LPs':>6} | {'Best z (Rs)':>12} | {'Gap %':>6}")
+    print("-" * 65)
     
-    best_variant_res = None
-    min_nodes = 1e9
     for n_strat_name, b_strat_name, n_strat, b_strat in variants:
-        n_exp, lps, t_el, z_b, gap, y_b = solve_bb(n_strat, b_strat)
-        print(f"{n_strat_name:>12} | {b_strat_name:>10} | {n_exp:6d} | {lps:6d} | {t_el:8.3f} | {z_b:12.4f} | {gap*100:6.2f}%")
-        if n_exp < min_nodes:
-            min_nodes = n_exp
-            best_variant_res = (n_strat_name, b_strat_name, z_b, y_b)
+        n_exp, lps, z_b, gap, y_b = solve_bb(n_strat, b_strat)
+        print(f"{n_strat_name:>12} | {b_strat_name:>10} | {n_exp:6d} | {lps:6d} | {z_b:12.4f} | {gap*100:6.2f}%")
             
     # Cross check with scipy.optimize.milp
     integrality = np.zeros(num_vars)
@@ -276,14 +256,11 @@ def run(roll="25027"):
 
     # ---------------- 21.4 Formulation Matters ----------------
     print("\n================ 21.4 Formulation Matters ================")
-    # Aggregated Linking: sum_i x_{ij} - n * y_j <= 0 (m constraints instead of n*m)
     A_ub_agg = np.zeros((m + m, num_vars))
-    # Capacity
     for j in range(m):
         A_ub_agg[j, j] = -Q[j]
         for i in range(n):
             A_ub_agg[j, m + i * m + j] = d[i]
-    # Aggregated linking
     for j in range(m):
         A_ub_agg[m + j, j] = -float(n)
         for i in range(n):
@@ -303,8 +280,6 @@ def run(roll="25027"):
 
     # ---------------- 21.5 Lagrangian Relaxation ----------------
     print("\n================ 21.5 Lagrangian Relaxation ================")
-    # Subgradient optimization
-    # Dualize sum_j x_{ij} = 1 with u_i
     u = np.mean(demand_marginals) * np.ones(n)
     theta = 2.0
     z_ub_lag = z_ip * 1.5
@@ -314,26 +289,18 @@ def run(roll="25027"):
     lb_history = []
     ub_history = []
     
-    # Precompute link costs C_ij = 2*dist[i,j]*c_opt*d[i]
     C_mat = np.zeros((n, m))
     for i in range(n):
         for j in range(m):
             C_mat[i, j] = 2.0 * dist[i, j] * c_opt * d[i] if 2.0 * dist[i, j] <= R_opt else 1e9
             
     for it in range(60):
-        # Solve m subproblems:
-        # min_{y_j in {0,1}, x_{.j}} f_j * y_j + sum_i (C_{ij} - u_i) * x_{ij}
-        # s.t. sum_i d_i x_{ij} <= Q_j * y_j, 0 <= x_{ij} <= y_j
         y_sub = np.zeros(m)
         x_sub = np.zeros((n, m))
         L_val = np.sum(u)
         
         for j in range(m):
-            # If y_j = 1: continuous knapsack
-            # profits = -(C_{ij} - u_i) = u_i - C_{ij}
-            # ratio = (u_i - C_{ij}) / d_i
             ratios = (u - C_mat[:, j]) / d
-            # Only consider items with positive profit (i.e. C_{ij} - u_i < 0)
             cand_items = [i for i in range(n) if ratios[i] > 0 and C_mat[i, j] < 1e8]
             cand_items.sort(key=lambda i: ratios[i], reverse=True)
             
@@ -365,10 +332,8 @@ def run(roll="25027"):
             theta /= 2.0
             non_improving = 0
             
-        # Feasible solution from open hubs
         open_hubs = np.where(y_sub > 0.5)[0]
         if len(open_hubs) > 0 and np.sum(Q[open_hubs]) >= np.sum(d):
-            # Quick assignment LP
             bounds_feas = [(1.0, 1.0) if j in open_hubs else (0.0, 0.0) for j in range(m)] + bounds[m:]
             res_feas = linprog(c_obj, A_ub=A_ub_strong, b_ub=b_ub_strong, A_eq=A_eq, b_eq=b_eq,
                                bounds=bounds_feas, method='highs')
@@ -376,7 +341,6 @@ def run(roll="25027"):
                 z_ub_lag = res_feas.fun
         ub_history.append(z_ub_lag)
         
-        # Subgradient: g_i = 1 - sum_j x_{ij}
         g = 1.0 - np.sum(x_sub, axis=1)
         norm_g_sq = np.sum(g**2)
         if norm_g_sq < 1e-6:
@@ -388,7 +352,6 @@ def run(roll="25027"):
     print(f"Strong LP Relaxation Bound:   {z_lp_strong:.4f} Rs/hour")
     print(f"Best Feasible Upper Bound:   {z_ub_lag:.4f} Rs/hour")
     
-    # Plot Lagrangian bounds
     plt.figure(figsize=(8, 5))
     plt.plot(lb_history, 'b-', label='Lower Bound L(u)')
     plt.plot(ub_history, 'r--', label='Upper Bound (Feasible)')
@@ -438,7 +401,6 @@ def run(roll="25027"):
         
     F_grid = np.array(F_grid)
     
-    # Golden Section Search for minimum of F(v) on [8, 30] to tol 0.1 m/s
     a_g, b_g = 8.0, 30.0
     x1_g = b_g - phi * (b_g - a_g)
     x2_g = a_g + phi * (b_g - a_g)
@@ -462,7 +424,6 @@ def run(roll="25027"):
     v_F_star = (a_g + b_g) / 2.0
     print(f"Cost-optimal speed v_F* = {v_F_star:.4f} m/s (vs Range-optimal v_R* = {v_R:.4f} m/s)")
     
-    # Plot F(v) vs v
     plt.figure(figsize=(8, 5))
     plt.plot(v_grid, F_grid, 'bo-', label='F(v) MILP cost')
     plt.axvline(x=v_F_star, color='r', linestyle='--', label=f'Cost-optimal v_F* = {v_F_star:.1f} m/s')
@@ -477,5 +438,4 @@ def run(roll="25027"):
     print("Saved plot to figures/problem_21_cost_speed.png")
 
 if __name__ == "__main__":
-    roll_num = sys.argv[1] if len(sys.argv) > 1 else "25027"
-    run(roll_num)
+    run()
