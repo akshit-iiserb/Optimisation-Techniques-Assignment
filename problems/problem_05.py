@@ -1,14 +1,10 @@
-import sys
-import re
-import os
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 
-def get_params(roll):
-    digits = re.sub(r"\D", "", str(roll))
-    d = digits.zfill(4)[-4:]
-    d1, d2, d3, d4 = map(int, d)
+def get_params(roll="25027"):
+    digits = [c for c in str(roll) if c.isdigit()]
+    d1, d2, d3, d4 = map(int, digits[-4:])
     p = d4 % 5 + 1
     q = d3 % 4 + 1
     r = d2 % 3 + 1
@@ -63,7 +59,6 @@ def run(roll="25027"):
     print(f"  mu3 (x2 >= 0):      {mu3:.4f}")
     
     # Plotting
-    os.makedirs("figures", exist_ok=True)
     plt.figure(figsize=(7, 6))
     
     # Grid for contours
@@ -93,5 +88,4 @@ def run(roll="25027"):
     print("Saved plot to figures/problem_05.png")
 
 if __name__ == "__main__":
-    roll_num = sys.argv[1] if len(sys.argv) > 1 else "25027"
-    run(roll_num)
+    run()
