@@ -1,12 +1,9 @@
-import sys
-import re
 import numpy as np
 from scipy.optimize import linprog
 
-def get_params(roll):
-    digits = re.sub(r"\D", "", str(roll))
-    d = digits.zfill(4)[-4:]
-    d1, d2, d3, d4 = map(int, d)
+def get_params(roll="25027"):
+    digits = [c for c in str(roll) if c.isdigit()]
+    d1, d2, d3, d4 = map(int, digits[-4:])
     p = d4 % 5 + 1
     q = d3 % 4 + 1
     r = d2 % 3 + 1
@@ -26,10 +23,6 @@ def run(roll="25027"):
     p, q, r, k = get_params(roll)
     print(f"Your roll number: {roll}   p = {p}   q = {q}   r = {r}   k = {k}")
     
-    # min (p+1)*x1 + (q+1)*x2 + (r+1)*x3
-    # s.t. -x1 - 2*x2 -   x3 + s1 = -(4 + k)
-    #     -2*x1 -   x2 - 3*x3 + s2 = -(12 + p)
-    #       -x1 -   x2 - 2*x3 + s3 = -(4 + q)
     c = np.array([float(p + 1), float(q + 1), float(r + 1), 0.0, 0.0, 0.0])
     headers = ["x1", "x2", "x3", "s1", "s2", "s3", "RHS"]
     
@@ -45,16 +38,13 @@ def run(roll="25027"):
     while True:
         print_tableau(T, headers, basis, iter_count)
         
-        # Check primal feasibility (all RHS >= 0)
         rhs = T[1:, -1]
         if np.all(rhs >= -1e-7):
             print("\nOptimal and primal feasible tableau reached!")
             break
             
-        # Leaving row: most negative RHS
-        leaving = np.argmin(rhs) + 1  # 1-indexed row
+        leaving = np.argmin(rhs) + 1
         
-        # Entering column: min ratio (c_j / |a_lj|) for a_lj < 0
         ratios = []
         for j in range(6):
             a_val = T[leaving, j]
@@ -73,7 +63,6 @@ def run(roll="25027"):
         
         print(f"\nLeaving variable: {headers[basis[leaving - 1]]}, Entering variable: {headers[entering]}, Pivot: {pivot_val:.4f}")
         
-        # Pivot operation
         T[leaving] = T[leaving] / pivot_val
         for i in range(4):
             if i != leaving:
@@ -82,7 +71,6 @@ def run(roll="25027"):
         basis[leaving - 1] = entering
         iter_count += 1
         
-    # Read solution
     sol = np.zeros(6)
     for i in range(1, 4):
         sol[basis[i - 1]] = T[i, -1]
@@ -93,7 +81,6 @@ def run(roll="25027"):
     print(f"  s1* = {sol[3]:.4f}, s2* = {sol[4]:.4f}, s3* = {sol[5]:.4f}")
     print(f"  Optimal z* = {z_opt:.4f}")
     
-    # Cross-check with linprog
     c_lp = [p + 1.0, q + 1.0, r + 1.0]
     A_ub = [
         [-1.0, -2.0, -1.0],
@@ -107,5 +94,4 @@ def run(roll="25027"):
     print(f"  Optimal z* = {res.fun:.4f}")
 
 if __name__ == "__main__":
-    roll_num = sys.argv[1] if len(sys.argv) > 1 else "25027"
-    run(roll_num)
+    run()
