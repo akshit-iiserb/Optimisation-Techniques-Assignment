@@ -1,14 +1,10 @@
-import sys
-import re
-import os
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import linprog
 
-def get_params(roll):
-    digits = re.sub(r"\D", "", str(roll))
-    d = digits.zfill(4)[-4:]
-    d1, d2, d3, d4 = map(int, d)
+def get_params(roll="25027"):
+    digits = [c for c in str(roll) if c.isdigit()]
+    d1, d2, d3, d4 = map(int, digits[-4:])
     p = d4 % 5 + 1
     q = d3 % 4 + 1
     r = d2 % 3 + 1
@@ -19,12 +15,6 @@ def run(roll="25027"):
     p, q, r, k = get_params(roll)
     print(f"Your roll number: {roll}   p = {p}   q = {q}   r = {r}   k = {k}")
     
-    # Lines: a1*x1 + a2*x2 = b
-    # 0: x1 + 2*x2 = 10 + r
-    # 1: 3*x1 + x2 = 15 + p
-    # 2: x1 = 4 + q
-    # 3: x1 = 0
-    # 4: x2 = 0
     lines = [
         (np.array([1.0, 2.0]), 10.0 + r),
         (np.array([3.0, 1.0]), 15.0 + p),
@@ -54,7 +44,6 @@ def run(roll="25027"):
             if abs(np.linalg.det(A)) > 1e-9:
                 pt = np.linalg.solve(A, b)
                 if is_feasible(pt):
-                    # Check if already present
                     already = False
                     for v in feasible_vertices:
                         if np.allclose(v, pt, atol=1e-5):
@@ -75,7 +64,6 @@ def run(roll="25027"):
             
     print(f"\nOptimal Vertex by Graphical Method: ({best_vertex[0]:.4f}, {best_vertex[1]:.4f}) with z = {best_z:.4f}")
     
-    # Confirm with scipy.optimize.linprog
     c_obj = [-(p + 2.0), -(q + 1.0)]
     A_ub = [
         [1.0, 2.0],
@@ -89,16 +77,12 @@ def run(roll="25027"):
     print(f"Linprog Confirmation:")
     print(f"  x1* = {res.x[0]:.4f}, x2* = {res.x[1]:.4f}, z* = {-res.fun:.4f}")
     
-    # Plotting
-    os.makedirs("figures", exist_ok=True)
     plt.figure(figsize=(8, 6))
-    
     x1_vals = np.linspace(0, 4.0 + q + 2.0, 400)
     plt.plot(x1_vals, (10.0 + r - x1_vals) / 2.0, 'r-', label=r'$x_1 + 2x_2 \leq 10+r$')
     plt.plot(x1_vals, 15.0 + p - 3.0 * x1_vals, 'g-', label=r'$3x_1 + x_2 \leq 15+p$')
     plt.axvline(x=4.0 + q, color='b', linestyle='-', label=r'$x_1 \leq 4+q$')
     
-    # Sort vertices counter-clockwise
     verts = np.array(feasible_vertices)
     center = np.mean(verts, axis=0)
     angles = np.arctan2(verts[:, 1] - center[1], verts[:, 0] - center[0])
@@ -123,5 +107,4 @@ def run(roll="25027"):
     print("Saved plot to figures/problem_06.png")
 
 if __name__ == "__main__":
-    roll_num = sys.argv[1] if len(sys.argv) > 1 else "25027"
-    run(roll_num)
+    run()
