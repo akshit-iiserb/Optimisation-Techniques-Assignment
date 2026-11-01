@@ -23,23 +23,24 @@ def run(roll="25027"):
     A = 0.0
     fA = f(A)
     t = 0.5
-    pts = [A]
-    f_vals = [fA]
     
-    curr = A + t
-    f_curr = f(curr)
-    pts.append(curr)
-    f_vals.append(f_curr)
+    # Rao's procedure (Section 5.10): evaluate at t0, 2t0, 4t0, ...
+    curr_t = t
+    f_curr = f(curr_t)
     
-    while f_curr < f_vals[-2]:
-        t *= 2.0
-        curr = pts[-1] + t
-        f_curr = f(curr)
-        pts.append(curr)
-        f_vals.append(f_curr)
-        
-    x1, x2, x3 = pts[-3], pts[-2], pts[-1]
-    f1, f2, f3 = f_vals[-3], f_vals[-2], f_vals[-1]
+    # If f(t0) < f(0), keep doubling step until f increases
+    prev_t = A
+    f_prev = fA
+    
+    while True:
+        next_t = 2.0 * curr_t
+        f_next = f(next_t)
+        if f_next > f_curr:
+            x1, x2, x3 = curr_t / 2.0 if curr_t / 2.0 > 0 else A, curr_t, next_t
+            f1, f2, f3 = f(x1), f_curr, f_next
+            break
+        curr_t = next_t
+        f_curr = f_next
     
     print("\nInitial Bracketing Triplet:")
     print(f"  A = {x1:.4f}, f(A) = {f1:.4f}")

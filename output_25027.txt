@@ -471,27 +471,23 @@ Saved plot to figures/problem_16.png
 Your roll number: 25027   p = 3   q = 3   r = 1   k = 6
 
 Initial Bracketing Triplet:
-  A = 0.5000, f(A) = 1.0625
-  B = 1.5000, f(B) = -10.9375
-  C = 3.5000, f(C) = 64.0625
+  A = 1.0000, f(A) = -5.0000
+  B = 2.0000, f(B) = -13.0000
+  C = 4.0000, f(C) = 145.0000
 
 --- Quadratic Interpolation Iterations ---
  Fit |       A |       B |       C |  lam_star |   h(lam*) |   f(lam*) | Test Ratio
 --------------------------------------------------------------------------------
-   1 |  0.5000 |  1.5000 |  3.5000 |    1.3636 |  -11.2443 |   -9.5175 |   0.181442
-   2 |  1.3636 |  1.5000 |  3.5000 |    1.6640 |  -11.5406 |  -12.2665 |   0.059177
-   3 |  1.5000 |  1.6640 |  3.5000 |    1.7451 |  -12.4300 |  -12.7236 |   0.023071
-   4 |  1.6640 |  1.7451 |  3.5000 |    1.8093 |  -12.8342 |  -12.9715 |   0.010587
-   5 |  1.7451 |  1.8093 |  3.5000 |    1.8458 |  -13.0092 |  -13.0634 |   0.004151
-   6 |  1.8093 |  1.8458 |  3.5000 |    1.8708 |  -13.0815 |  -13.1041 |   0.001722
-   7 |  1.8458 |  1.8708 |  3.5000 |    1.8858 |  -13.1108 |  -13.1196 |   0.000673
+   1 |  1.0000 |  2.0000 |  4.0000 |    1.6379 |  -16.8017 |  -12.0891 |   0.389830
+   2 |  1.6379 |  2.0000 |  4.0000 |    1.8554 |  -13.7214 |  -13.0812 |   0.048940
+   3 |  1.6379 |  1.8554 |  2.0000 |    1.9079 |  -13.1201 |  -13.1298 |   0.000735
 
-Final Quadratic Interpolation Result: lambda* = 1.8858, f(lambda*) = -13.1196
-Total function evaluations used: 11
+Final Quadratic Interpolation Result: lambda* = 1.9079, f(lambda*) = -13.1298
+Total function evaluations used: 9
 
 SciPy minimize_scalar Result:
   lambda* = 1.9115, f(lambda*) = -13.1300
-  Absolute difference in lambda*: 0.025715
+  Absolute difference in lambda*: 0.003664
 
 Comment on Stopping Test:
 The function-value test |(h - f)/f| <= 0.001 measures relative agreement in function value,
@@ -503,21 +499,21 @@ which can be satisfied even when the predicted point is still somewhat distant f
 Your roll number: 25027   p = 3   q = 3   r = 1   k = 6
 Parameter c = 18.0000
 
-Bracketing found: A = 1.2000 (df = -29.2320), B = 2.8000 (df = 171.7280)
+Bracketing found: A = 1.6000 (df = -23.6320), B = 3.2000 (df = 352.6880)
 
 --- Cubic Interpolation Iterations ---
 Iter |       A |       B |  lam_star |   f(lam*) |   f'(lam*) |     |f'|
 ---------------------------------------------------------------------------
-   1 |  1.2000 |  2.8000 |    1.9872 |  -39.0175 |     0.7367 |   0.7367
-   2 |  1.2000 |  1.9872 |    1.9787 |  -39.0202 |    -0.0853 |   0.0853
-   3 |  1.9787 |  1.9872 |    1.9796 |  -39.0203 |     0.0000 |   0.0000
+   1 |  1.6000 |  3.2000 |    2.0616 |  -38.6785 |     8.5707 |   8.5707
+   2 |  1.6000 |  2.0616 |    1.9778 |  -39.0201 |    -0.1722 |   0.1722
+   3 |  1.9778 |  2.0616 |    1.9796 |  -39.0203 |     0.0002 |   0.0002
 
-Final Cubic Interpolation: lambda* = 1.9796, f'(lambda*) = 0.0000
+Final Cubic Interpolation: lambda* = 1.9796, f'(lambda*) = 0.0002
 Total iterations: 3
 Function evaluations: f=9, f'=15
 
 True root of f'(lambda) = 0: lambda* = 1.9796
-Error in root: 0.000000
+Error in root: 0.000002
 Comparison: Cubic interpolation converged rapidly using gradient information compared to quadratic fit.
 
 =================================================================

@@ -1,0 +1,22 @@
+[project]
+name = "optimisation-techniques-assignment"
+version = "0.1.0"
+description = "Applied Optimization Assignment Suite"
+readme = "README.md"
+authors = [
+    { name = "Akshit", email = "akshit25@iiserb.ac.in" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "matplotlib>=3.7.0",
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.29.0",
+]
+
+[tool.uv]
+package = false

@@ -1,0 +1,102 @@
+import numpy as np
+from scipy.optimize import minimize_scalar
+
+def get_params(roll="25027"):
+    digits = [c for c in str(roll) if c.isdigit()]
+    d1, d2, d3, d4 = map(int, digits[-4:])
+    p = d4 % 5 + 1
+    q = d3 % 4 + 1
+    r = d2 % 3 + 1
+    k = (d1 + d2 + d3 + d4) % 9 + 1
+    return p, q, r, k
+
+def run(roll="25027"):
+    p, q, r, k = get_params(roll)
+    print(f"Your roll number: {roll}   p = {p}   q = {q}   r = {r}   k = {k}")
+    
+    eval_count = 0
+    def f(lam):
+        nonlocal eval_count
+        eval_count += 1
+        return lam**4 - (3.0 + p) * lam**2 - (2.0 + q) * lam + 5.0
+        
+    A = 0.0
+    fA = f(A)
+    t = 0.5
+    
+    # Rao's procedure (Section 5.10): evaluate at t0, 2t0, 4t0, ...
+    curr_t = t
+    f_curr = f(curr_t)
+    
+    # If f(t0) < f(0), keep doubling step until f increases
+    prev_t = A
+    f_prev = fA
+    
+    while True:
+        next_t = 2.0 * curr_t
+        f_next = f(next_t)
+        if f_next > f_curr:
+            x1, x2, x3 = curr_t / 2.0 if curr_t / 2.0 > 0 else A, curr_t, next_t
+            f1, f2, f3 = f(x1), f_curr, f_next
+            break
+        curr_t = next_t
+        f_curr = f_next
+    
+    print("\nInitial Bracketing Triplet:")
+    print(f"  A = {x1:.4f}, f(A) = {f1:.4f}")
+    print(f"  B = {x2:.4f}, f(B) = {f2:.4f}")
+    print(f"  C = {x3:.4f}, f(C) = {f3:.4f}")
+    
+    print("\n--- Quadratic Interpolation Iterations ---")
+    print(f"{'Fit':>4} | {'A':>7} | {'B':>7} | {'C':>7} | {'lam_star':>9} | {'h(lam*)':>9} | {'f(lam*)':>9} | {'Test Ratio':>10}")
+    print("-" * 80)
+    
+    fit_idx = 0
+    while True:
+        fit_idx += 1
+        denom = (x2 - x3) * f1 + (x3 - x1) * f2 + (x1 - x2) * f3
+        numer = (x2**2 - x3**2) * f1 + (x3**2 - x1**2) * f2 + (x1**2 - x2**2) * f3
+        lam_star = 0.5 * numer / denom
+        
+        c_poly = ((f3 - f2) / (x3 - x2) - (f2 - f1) / (x2 - x1)) / (x3 - x1)
+        b_poly = (f2 - f1) / (x2 - x1) - c_poly * (x1 + x2)
+        a_poly = f1 - b_poly * x1 - c_poly * (x1**2)
+        
+        h_val = a_poly + b_poly * lam_star + c_poly * (lam_star**2)
+        f_val = f(lam_star)
+        
+        test_val = abs((h_val - f_val) / f_val)
+        print(f"{fit_idx:4d} | {x1:7.4f} | {x2:7.4f} | {x3:7.4f} | {lam_star:9.4f} | {h_val:9.4f} | {f_val:9.4f} | {test_val:10.6f}")
+        
+        if test_val <= 0.001 or fit_idx >= 15:
+            break
+            
+        all_pts = [(x1, f1), (x2, f2), (x3, f3), (lam_star, f_val)]
+        all_pts.sort(key=lambda item: item[0])
+        best_i = int(np.argmin([p[1] for p in all_pts]))
+        
+        if best_i == 0:
+            triplet = all_pts[:3]
+        elif best_i == 3:
+            triplet = all_pts[1:]
+        else:
+            triplet = all_pts[best_i - 1 : best_i + 2]
+            
+        x1, f1 = triplet[0]
+        x2, f2 = triplet[1]
+        x3, f3 = triplet[2]
+        
+    print(f"\nFinal Quadratic Interpolation Result: lambda* = {lam_star:.4f}, f(lambda*) = {f_val:.4f}")
+    print(f"Total function evaluations used: {eval_count}")
+    
+    res_scipy = minimize_scalar(lambda x: x**4 - (3.0 + p) * x**2 - (2.0 + q) * x + 5.0)
+    print(f"\nSciPy minimize_scalar Result:")
+    print(f"  lambda* = {res_scipy.x:.4f}, f(lambda*) = {res_scipy.fun:.4f}")
+    print(f"  Absolute difference in lambda*: {abs(lam_star - res_scipy.x):.6f}")
+    
+    print("\nComment on Stopping Test:")
+    print("The function-value test |(h - f)/f| <= 0.001 measures relative agreement in function value,")
+    print("which can be satisfied even when the predicted point is still somewhat distant from the true root if the function is flat.")
+
+if __name__ == "__main__":
+    run()

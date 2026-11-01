@@ -31,18 +31,15 @@ def run(roll="25027"):
         return 5.0 * lam**4 - 15.0 * lam**2 - c
         
     t = 0.4
-    pt = 0.0
-    d_prev = df(pt)
-    
+    # Rao's Stage 2: B is the first value out of t0, 2*t0, 4*t0, 8*t0... where df >= 0
+    # A is the last point with df < 0
+    curr_t = t
     while True:
-        pt_next = pt + t
-        d_next = df(pt_next)
-        if d_next > 0:
-            A = pt
-            B = pt_next
+        if df(curr_t) >= 0:
+            B = curr_t
+            A = curr_t / 2.0
             break
-        pt = pt_next
-        t *= 2.0
+        curr_t *= 2.0
         
     print(f"\nBracketing found: A = {A:.4f} (df = {df(A):.4f}), B = {B:.4f} (df = {df(B):.4f})")
     
